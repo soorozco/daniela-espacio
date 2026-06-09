@@ -249,28 +249,48 @@ scenes.forEach(s=>{
 scenes.forEach(()=>{ const d=document.createElement('span'); d.className='dot'; dotsEl.appendChild(d); });
 
 /* ====== VOCES ====== */
+// Voces elegidas una sola vez: la mejor femenina (Daniela/narradora) y la
+// mejor masculina (Cosmo, con tono de niño). Se prioriza calidad por nombre.
+let vFemale=null, vMale=null, vNarr=null;
+function byPref(pool, names){
+  for(const n of names){
+    const m = pool.find(v=>v.name.toLowerCase().includes(n));
+    if(m) return m;
+  }
+  return null;
+}
 function loadVoices(){
   voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
-  esVoices = voices.filter(v=>/es(-|_)?/i.test(v.lang));
+  esVoices = voices.filter(v=>/^es(-|_|$)/i.test(v.lang));
+  const pool = esVoices.length?esVoices:voices;
+  if(!pool.length) return;
+  // Femenina/niña: voces claras y de buena calidad primero (Paulina es-MX es premium)
+  vFemale = byPref(pool, ['paulina','mónica','monica','marisol','angelica','angélica',
+                          'esperanza','helena','laura','sandy','sabina','google español','female','mujer'])
+            || pool[0];
+  // Masculina/niño: Rocko (es-MX, voz de chico joven) es la mejor para un niño;
+  // luego otras masculinas y, si no hay, cualquier voz distinta a la de Daniela.
+  vMale = byPref(pool, ['rocko','reed','juan','jorge','diego','carlos','enrique','pablo',
+                        'andrés','andres','eddy','grandpa','male','hombre'])
+          || pool.find(v=>v!==vFemale) || vFemale;
+  // Narrador/a: distinta a Daniela y de buena calidad
+  vNarr = byPref(pool, ['mónica','monica','shelley','marisol','sandy','google español'])
+          || (pool.find(v=>v!==vFemale)) || vFemale;
 }
 if('speechSynthesis' in window){
   loadVoices();
   speechSynthesis.onvoiceschanged=loadVoices;
 }
 function pickVoice(who){
-  const pool = esVoices.length?esVoices:voices;
-  if(!pool.length) return null;
-  // intenta diferenciar por nombre/género si hay varias
-  const female=pool.find(v=>/(paulina|mónica|monica|female|mujer|esperanza|google español)/i.test(v.name));
-  const male=pool.find(v=>/(jorge|juan|male|hombre|diego|carlos)/i.test(v.name));
-  if(who===D) return female||pool[0];
-  if(who===C) return male||pool[pool.length-1];
-  return female||pool[0];
+  if(who===D) return vFemale;
+  if(who===C) return vMale;
+  return vNarr || vFemale;
 }
 function voiceParams(who){
-  if(who===D) return {pitch:1.5, rate:1.0};   // niña
-  if(who===C) return {pitch:0.7, rate:0.95};  // perrito guardián
-  return {pitch:1.05, rate:0.94};             // narrador
+  // Tonos moderados = menos "robot". Cosmo = niño: voz masculina joven + tono algo alto.
+  if(who===D) return {pitch:1.12, rate:1.0};   // Daniela: niña, suave y natural
+  if(who===C) return {pitch:1.22, rate:1.06};  // Cosmo: niño, brillante y animado (sin distorsionar)
+  return {pitch:1.0, rate:0.94};               // narrador: cálido y pausado
 }
 
 /* ====== RENDER ESCENA ====== */
