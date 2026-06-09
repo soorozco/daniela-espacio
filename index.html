@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Daniela en el espacio · y su espacio</title>
+<meta name="description" content="Un cuento sobre perdonarse... y tener un amigo que nunca se va.">
+<style>
+  :root{
+    --lav:#b9a7e8; --lav2:#d8c9f5; --rose:#f3b9d6; --sky:#a9c8f0;
+    --ink:#3a2c5a; --cream:#fff7ee; --gold:#ffd98a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;
+    color:var(--ink); overflow:hidden;
+    background:#1a1430;
+    background:radial-gradient(ellipse at 50% 20%, #2a2150 0%, #16102b 60%, #0c0820 100%);
+    -webkit-user-select:none; user-select:none;
+  }
+  /* estrellas de fondo */
+  #stars{position:fixed; inset:0; z-index:0; pointer-events:none;}
+  .twinkle{position:absolute; width:2px; height:2px; border-radius:50%; background:#fff;
+    animation:tw 3s ease-in-out infinite;}
+  @keyframes tw{0%,100%{opacity:.15; transform:scale(.7)} 50%{opacity:.9; transform:scale(1.2)}}
+
+  .screen{position:fixed; inset:0; z-index:2; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; padding:24px; text-align:center;}
+
+  /* ---------- INICIO ---------- */
+  #start h1{font-size:clamp(28px,8vw,56px); margin:.1em 0; color:var(--cream);
+    text-shadow:0 2px 16px rgba(243,185,214,.6), 0 0 2px #000;}
+  #start .sub{font-size:clamp(15px,4vw,22px); color:var(--lav2); margin-bottom:6px; font-style:italic;}
+  #start .hero{width:min(78vw,420px); border-radius:22px; margin:14px 0 22px;
+    box-shadow:0 12px 40px rgba(0,0,0,.5); border:3px solid rgba(255,255,255,.25);}
+  .modes{display:flex; gap:16px; flex-wrap:wrap; justify-content:center;}
+  .btn{cursor:pointer; border:none; border-radius:18px; padding:16px 22px;
+    font-size:clamp(15px,4.2vw,19px); font-weight:bold; font-family:inherit;
+    color:var(--ink); box-shadow:0 6px 18px rgba(0,0,0,.35); transition:transform .15s, box-shadow .15s;}
+  .btn:active{transform:scale(.95);}
+  .btn .big{display:block; font-size:1.5em; margin-bottom:2px;}
+  .btn.read{background:linear-gradient(135deg,#fff,#ffe9f5);}
+  .btn.voice{background:linear-gradient(135deg,#ffe6a8,#ffd07a);}
+  #start .hint{margin-top:18px; color:#b7a9e0; font-size:13px; max-width:320px;}
+
+  /* ---------- CUENTO ---------- */
+  #book{display:none;}
+  #book.on{display:flex; padding:0;}
+  .stage{position:relative; width:100%; height:100%; display:flex;
+    align-items:center; justify-content:center; overflow:hidden;}
+  .scene-img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+    opacity:0; transition:opacity .7s ease; filter:saturate(1.05);}
+  .scene-img.show{opacity:1;}
+  /* viñeta para legibilidad del texto */
+  .vignette{position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(to top, rgba(20,12,40,.82) 0%, rgba(20,12,40,.25) 32%, rgba(20,12,40,0) 55%);}
+
+  /* caja de texto */
+  #textbox{position:absolute; left:0; right:0; bottom:0; z-index:5;
+    padding:18px 20px calc(20px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; gap:10px; align-items:center;
+    transition:opacity .4s; max-height:52%; overflow-y:auto;}
+  #textbox.hide{opacity:0; pointer-events:none;}
+  .line{max-width:760px; width:100%; padding:11px 16px; border-radius:16px;
+    font-size:clamp(15px,4vw,20px); line-height:1.4; animation:pop .45s ease both;
+    box-shadow:0 4px 16px rgba(0,0,0,.3);}
+  @keyframes pop{from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none}}
+  .line .who{font-weight:bold; display:block; font-size:.78em; opacity:.85; margin-bottom:1px; letter-spacing:.3px;}
+  .line.daniela{background:rgba(255,247,238,.95); color:#5a2c4a;}
+  .line.daniela .who{color:#d6589b;}
+  .line.cosmo{background:rgba(210,228,255,.95); color:#243a66;}
+  .line.cosmo .who{color:#2f72c8;}
+  .line.narrador{background:rgba(58,44,90,.86); color:#f3ecff; font-style:italic; text-align:center;}
+  .line.narrador .who{display:none;}
+
+  /* speaking glow */
+  .line.speaking{outline:2px solid var(--gold); box-shadow:0 0 22px rgba(255,217,138,.7);}
+
+  /* controles */
+  .topbar{position:absolute; top:0; left:0; right:0; z-index:6; display:flex;
+    justify-content:space-between; align-items:center; padding:12px 14px calc(12px); gap:8px;}
+  .pill{display:flex; gap:6px;}
+  .ic{width:42px; height:42px; border-radius:50%; border:none; cursor:pointer;
+    background:rgba(255,255,255,.18); backdrop-filter:blur(6px); color:#fff;
+    font-size:18px; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.3); transition:transform .12s, background .2s;}
+  .ic:active{transform:scale(.9);}
+  .ic.active{background:rgba(255,217,138,.9); color:#5a3a00;}
+
+  .dots{position:absolute; bottom:6px; left:0; right:0; z-index:6; display:flex;
+    gap:6px; justify-content:center; padding:4px; flex-wrap:wrap; pointer-events:none;}
+  .dot{width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.3); transition:all .3s;}
+  .dot.on{background:var(--gold); transform:scale(1.4);}
+
+  /* flechas nav */
+  .nav{position:absolute; top:50%; transform:translateY(-50%); z-index:6;
+    width:54px; height:54px; border-radius:50%; border:none; cursor:pointer;
+    background:rgba(255,255,255,.16); color:#fff; font-size:26px; line-height:1;
+    display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px);
+    box-shadow:0 2px 10px rgba(0,0,0,.3); transition:opacity .3s, transform .12s;}
+  .nav:active{transform:translateY(-50%) scale(.9);}
+  .nav.prev{left:10px;} .nav.next{right:10px;}
+  .nav.hidden{opacity:0; pointer-events:none;}
+
+  /* fin */
+  #endcard{position:absolute; inset:0; z-index:7; display:none; flex-direction:column;
+    align-items:center; justify-content:center; gap:18px; padding:26px; text-align:center;
+    background:radial-gradient(ellipse at 50% 40%, rgba(42,33,80,.6), rgba(12,8,32,.92));}
+  #endcard.on{display:flex; animation:pop .8s ease both;}
+  #endcard p{color:var(--cream); font-size:clamp(17px,4.6vw,24px); max-width:560px; line-height:1.5; font-style:italic;
+    text-shadow:0 2px 12px rgba(243,185,214,.5);}
+  #endcard .heart{font-size:46px; animation:beat 1.6s ease-in-out infinite;}
+  @keyframes beat{0%,100%{transform:scale(1)} 50%{transform:scale(1.18)}}
+
+  @media (min-width:900px){ #textbox{padding-bottom:40px;} }
+</style>
+</head>
+<body>
+<div id="stars"></div>
+
+<!-- PANTALLA DE INICIO -->
+<div id="start" class="screen">
+  <div class="sub">un cuento para abrazarte por dentro</div>
+  <h1>Daniela en el espacio</h1>
+  <div class="sub" style="margin-top:-6px">· y su espacio ·</div>
+  <img class="hero" src="images/cover.jpg" alt="Portada">
+  <div class="modes">
+    <button class="btn read" onclick="iniciar('read')">
+      <span class="big">📖</span>Leer el cuento
+    </button>
+    <button class="btn voice" onclick="iniciar('voice')">
+      <span class="big">🔊</span>Escuchar narrado
+    </button>
+  </div>
+  <p class="hint">El modo <b>Escuchar</b> usa la voz del dispositivo. Sube el volumen 🔈 y, si no se oye, prueba el modo <b>Leer</b>.</p>
+</div>
+
+<!-- CUENTO -->
+<div id="book" class="screen">
+  <div class="stage" id="stage">
+    <!-- imágenes se inyectan aquí -->
+    <div class="vignette"></div>
+
+    <div class="topbar">
+      <div class="pill">
+        <button class="ic" title="Inicio" onclick="volverInicio()">🏠</button>
+      </div>
+      <div class="pill">
+        <button class="ic" id="btnMode" title="Cambiar modo" onclick="toggleMode()">📖</button>
+        <button class="ic" id="btnRepeat" title="Repetir voz" onclick="repetir()">🔁</button>
+        <button class="ic" id="btnMute" title="Silenciar" onclick="toggleMute()">🔊</button>
+      </div>
+    </div>
+
+    <div id="textbox"></div>
+
+    <button class="nav prev" onclick="prev()">‹</button>
+    <button class="nav next" onclick="next()">›</button>
+
+    <div class="dots" id="dots"></div>
+
+    <div id="endcard">
+      <div class="heart">💜</div>
+      <p id="endtext"></p>
+      <button class="btn read" onclick="volverInicio()" style="margin-top:6px">↺ Volver a empezar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ====== ESTRELLAS DE FONDO ====== */
+(function(){
+  const s=document.getElementById('stars'); let h='';
+  for(let i=0;i<70;i++){
+    const x=Math.random()*100, y=Math.random()*100, d=Math.random()*3, sz=Math.random()*2+1;
+    h+=`<span class="twinkle" style="left:${x}%;top:${y}%;width:${sz}px;height:${sz}px;animation-delay:${d}s"></span>`;
+  }
+  s.innerHTML=h;
+})();
+
+/* ====== GUION ====== */
+const N='narrador', D='daniela', C='cosmo';
+const scenes=[
+  {img:'1', lines:[
+    {w:D, t:'Hoy todo me salió mal, Cosmo… rompí mi dibujo, me peleé con Sofía… soy un desastre.'},
+    {w:C, t:'(Cosmo ladra suavecito y se acurruca más cerca de ella.)'}
+  ]},
+  {img:'2', lines:[
+    {w:N, t:'Daniela se durmió abrazando a Cosmo. Por la ventana entró una luz azul muy suave que los envolvió, y poco a poco empezaron a flotar hacia las estrellas.'}
+  ]},
+  {img:'3', lines:[
+    {w:D, t:'¡Cosmo! ¿Dónde estamos?'},
+    {w:C, t:'En el espacio, Daniela… y también dentro de tu espacio. Ven, hay algo que necesitas ver.'}
+  ]},
+  {img:'4', lines:[
+    {w:N, t:'Llegaron a un pequeño planeta azul de montañas suaves. Tenía manchas oscuras, y en el centro un agujero negro giraba despacio, tragándose las estrellitas.'}
+  ]},
+  {img:'5', lines:[
+    {w:D, t:'¡¿Qué son esas cosas?!'},
+    {w:C, t:'Son tus errores, Daniela. Mientras no te perdones, se hacen más grandes y más fuertes.'}
+  ]},
+  {img:'6', lines:[
+    {w:N, t:'Los monstruos los persiguieron por el planeta. Daniela tropezó y cayó. El agujero negro se hizo aún más grande.'},
+    {w:D, t:'¡No puedo! ¡Siempre lo arruino todo! ¡Me quiero ir!'}
+  ]},
+  {img:'7', lines:[
+    {w:C, t:'¡Daniela, mírame! ¿Recuerdas cuando te caíste de la bici y te cargué la mochila todo el camino? ¿Recuerdas cuando te quedaste sola en tu primer día de escuela, y yo me quedé contigo debajo del pupitre? Yo nunca me fui, aunque te equivocaras. Nunca me fui.'}
+  ]},
+  {img:'8', lines:[
+    {w:N, t:'Daniela se levantó con lágrimas y abrazó fuerte a Cosmo. Los monstruos se detuvieron de golpe.'},
+    {w:D, t:'Lo siento… siento haber sido tan dura conmigo. Perdóname, Daniela.'}
+  ]},
+  {img:'9', lines:[
+    {w:N, t:'En cuanto Daniela se perdonó, los monstruos empezaron a brillar. Sus formas negras se derritieron como pintura y se volvieron estrellitas de colores. El agujero negro estalló en una hermosa nebulosa rosa, lila, azul y amarilla.'}
+  ]},
+  {img:'10', lines:[
+    {w:C, t:'¿Ves? Los errores solo son feos mientras no los perdonas.'},
+    {w:D, t:'Gracias por no irte nunca, Cosmo.'}
+  ]},
+  {img:'11', lines:[
+    {w:N, t:'Regresaron a la habitación. La luz suave de la mañana entraba por la ventana. Daniela despertó abrazando a Cosmo, que seguía siendo un perrito normal. Sonrió tranquila.'}
+  ]},
+  {img:'12', lines:[
+    {w:N, t:'Daniela dibujó algo nuevo: ella y Cosmo flotando entre las estrellas. Su cara se veía feliz y en paz.'}
+  ]}
+];
+const FINAL='A veces, para sanar las heridas, solo necesitamos perdonarnos… y tener un amigo que nunca se vaya.';
+
+/* ====== ESTADO ====== */
+let i=0, mode='read', muted=false, voices=[], esVoices=[];
+const stage=document.getElementById('stage');
+const textbox=document.getElementById('textbox');
+const dotsEl=document.getElementById('dots');
+
+/* precargar imágenes */
+const imgEls={};
+['cover',...scenes.map(s=>s.img)].forEach(id=>{
+  const im=new Image(); im.src='images/'+id+'.jpg';
+});
+scenes.forEach(s=>{
+  const el=document.createElement('img');
+  el.className='scene-img'; el.src='images/'+s.img+'.jpg'; el.alt='';
+  stage.insertBefore(el, stage.firstChild);
+  imgEls[s.img]=el;
+});
+
+/* dots */
+scenes.forEach(()=>{ const d=document.createElement('span'); d.className='dot'; dotsEl.appendChild(d); });
+
+/* ====== VOCES ====== */
+function loadVoices(){
+  voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+  esVoices = voices.filter(v=>/es(-|_)?/i.test(v.lang));
+}
+if('speechSynthesis' in window){
+  loadVoices();
+  speechSynthesis.onvoiceschanged=loadVoices;
+}
+function pickVoice(who){
+  const pool = esVoices.length?esVoices:voices;
+  if(!pool.length) return null;
+  // intenta diferenciar por nombre/género si hay varias
+  const female=pool.find(v=>/(paulina|mónica|monica|female|mujer|esperanza|google español)/i.test(v.name));
+  const male=pool.find(v=>/(jorge|juan|male|hombre|diego|carlos)/i.test(v.name));
+  if(who===D) return female||pool[0];
+  if(who===C) return male||pool[pool.length-1];
+  return female||pool[0];
+}
+function voiceParams(who){
+  if(who===D) return {pitch:1.5, rate:1.0};   // niña
+  if(who===C) return {pitch:0.7, rate:0.95};  // perrito guardián
+  return {pitch:1.05, rate:0.94};             // narrador
+}
+
+/* ====== RENDER ESCENA ====== */
+function render(){
+  // imagen
+  Object.values(imgEls).forEach(e=>e.classList.remove('show'));
+  imgEls[scenes[i].img].classList.add('show');
+  // dots
+  [...dotsEl.children].forEach((d,k)=>d.classList.toggle('on',k===i));
+  // flechas
+  document.querySelector('.nav.prev').classList.toggle('hidden', i===0);
+  // texto
+  textbox.innerHTML='';
+  if(mode==='read'){
+    textbox.classList.remove('hide');
+    scenes[i].lines.forEach((ln,k)=>{
+      const el=document.createElement('div');
+      el.className='line '+ln.w;
+      el.style.animationDelay=(k*0.25)+'s';
+      el.innerHTML=`<span class="who">${ln.w==='daniela'?'Daniela':ln.w==='cosmo'?'Cosmo':''}</span>${ln.t}`;
+      textbox.appendChild(el);
+    });
+  } else {
+    textbox.classList.add('hide'); // en modo voz, oculto el texto
+  }
+  // voz
+  cancelSpeech();
+  if(mode==='voice' && !muted) speakScene();
+}
+
+/* ====== VOZ ====== */
+let speaking=false;
+function cancelSpeech(){
+  if('speechSynthesis' in window){ speechSynthesis.cancel(); }
+  speaking=false;
+}
+function speakScene(){
+  if(!('speechSynthesis' in window)) return;
+  const queue=scenes[i].lines.filter(l=>!/^\(/.test(l.t)); // omite acotaciones tipo (ladra)
+  let k=0;
+  speaking=true;
+  (function nextLine(){
+    if(k>=queue.length || !speaking) return;
+    const ln=queue[k++];
+    const u=new SpeechSynthesisUtterance(ln.t);
+    const v=pickVoice(ln.w); if(v) u.voice=v;
+    u.lang='es-MX';
+    const p=voiceParams(ln.w); u.pitch=p.pitch; u.rate=p.rate;
+    u.onend=()=>{ setTimeout(nextLine, 280); };
+    u.onerror=()=>{ setTimeout(nextLine, 100); };
+    speechSynthesis.speak(u);
+  })();
+}
+function speak(text, who){
+  if(!('speechSynthesis' in window)||muted) return;
+  cancelSpeech();
+  const u=new SpeechSynthesisUtterance(text);
+  const v=pickVoice(who||N); if(v) u.voice=v;
+  u.lang='es-MX'; const p=voiceParams(who||N); u.pitch=p.pitch; u.rate=p.rate;
+  speechSynthesis.speak(u);
+}
+
+/* ====== NAV ====== */
+function next(){
+  if(i<scenes.length-1){ i++; render(); }
+  else { showEnd(); }
+}
+function prev(){ if(i>0){ i--; document.getElementById('endcard').classList.remove('on'); render(); } }
+
+function showEnd(){
+  cancelSpeech();
+  textbox.classList.add('hide');
+  document.getElementById('endtext').textContent=FINAL;
+  document.getElementById('endcard').classList.add('on');
+  if(mode==='voice' && !muted) speak(FINAL, N);
+}
+
+/* ====== MODOS / CONTROLES ====== */
+function iniciar(m){
+  mode=m;
+  document.getElementById('start').style.display='none';
+  document.getElementById('book').classList.add('on');
+  i=0;
+  syncControls();
+  // gesto del usuario: desbloquea audio
+  if(m==='voice' && 'speechSynthesis' in window){
+    const warm=new SpeechSynthesisUtterance(' '); speechSynthesis.speak(warm);
+  }
+  render();
+}
+function syncControls(){
+  document.getElementById('btnMode').textContent = mode==='voice'?'🔊':'📖';
+  document.getElementById('btnRepeat').style.display = mode==='voice'?'flex':'none';
+  document.getElementById('btnMute').style.display = mode==='voice'?'flex':'none';
+}
+function toggleMode(){
+  mode = mode==='voice'?'read':'voice';
+  syncControls(); render();
+}
+function toggleMute(){
+  muted=!muted;
+  document.getElementById('btnMute').textContent=muted?'🔇':'🔊';
+  document.getElementById('btnMute').classList.toggle('active',muted);
+  if(muted) cancelSpeech();
+  else if(mode==='voice') speakScene();
+}
+function repetir(){ if(mode==='voice'){ cancelSpeech(); speakScene(); } }
+function volverInicio(){
+  cancelSpeech();
+  document.getElementById('endcard').classList.remove('on');
+  document.getElementById('book').classList.remove('on');
+  document.getElementById('start').style.display='flex';
+}
+
+/* ====== TECLADO + SWIPE ====== */
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('book').classList.contains('on')) return;
+  if(e.key==='ArrowRight'||e.key===' ') next();
+  if(e.key==='ArrowLeft') prev();
+  if(e.key==='Escape') volverInicio();
+});
+let tx=0;
+stage.addEventListener('touchstart',e=>{ tx=e.changedTouches[0].clientX; },{passive:true});
+stage.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-tx;
+  if(Math.abs(dx)>50){ dx<0?next():prev(); }
+},{passive:true});
+/* tap en imagen (no en controles) avanza */
+stage.addEventListener('click',e=>{
+  if(e.target.closest('.ic,.nav,.btn,#textbox,#endcard')) return;
+  next();
+});
+</script>
+</body>
+</html>
