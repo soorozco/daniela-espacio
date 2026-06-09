@@ -41,7 +41,6 @@
   .btn:active{transform:scale(.95);}
   .btn .big{display:block; font-size:1.5em; margin-bottom:2px;}
   .btn.read{background:linear-gradient(135deg,#fff,#ffe9f5);}
-  .btn.voice{background:linear-gradient(135deg,#ffe6a8,#ffd07a);}
   #start .hint{margin-top:18px; color:#b7a9e0; font-size:13px; max-width:320px;}
 
   /* ---------- CUENTO ---------- */
@@ -73,9 +72,6 @@
   .line.cosmo .who{color:#2f72c8;}
   .line.narrador{background:rgba(58,44,90,.86); color:#f3ecff; font-style:italic; text-align:center;}
   .line.narrador .who{display:none;}
-
-  /* speaking glow */
-  .line.speaking{outline:2px solid var(--gold); box-shadow:0 0 22px rgba(255,217,138,.7);}
 
   /* controles */
   .topbar{position:absolute; top:0; left:0; right:0; z-index:6; display:flex;
@@ -126,14 +122,11 @@
   <div class="sub" style="margin-top:-6px">· y su espacio ·</div>
   <img class="hero" src="images/cover.jpg" alt="Portada">
   <div class="modes">
-    <button class="btn read" onclick="iniciar('read')">
-      <span class="big">📖</span>Leer el cuento
-    </button>
-    <button class="btn voice" onclick="iniciar('voice')">
-      <span class="big">🔊</span>Escuchar narrado
+    <button class="btn read" onclick="iniciar()">
+      <span class="big">📖</span>Comenzar el cuento
     </button>
   </div>
-  <p class="hint">El modo <b>Escuchar</b> usa la voz del dispositivo. Sube el volumen 🔈 y, si no se oye, prueba el modo <b>Leer</b>.</p>
+  <p class="hint">Avanza con las flechas, deslizando o tocando la imagen.</p>
 </div>
 
 <!-- CUENTO -->
@@ -145,11 +138,6 @@
     <div class="topbar">
       <div class="pill">
         <button class="ic" title="Inicio" onclick="volverInicio()">🏠</button>
-      </div>
-      <div class="pill">
-        <button class="ic" id="btnMode" title="Cambiar modo" onclick="toggleMode()">📖</button>
-        <button class="ic" id="btnRepeat" title="Repetir voz" onclick="repetir()">🔁</button>
-        <button class="ic" id="btnMute" title="Silenciar" onclick="toggleMute()">🔊</button>
       </div>
     </div>
 
@@ -228,7 +216,7 @@ const scenes=[
 const FINAL='A veces, para sanar las heridas, solo necesitamos perdonarnos… y tener un amigo que nunca se vaya.';
 
 /* ====== ESTADO ====== */
-let i=0, mode='read', muted=false, voices=[], esVoices=[];
+let i=0;
 const stage=document.getElementById('stage');
 const textbox=document.getElementById('textbox');
 const dotsEl=document.getElementById('dots');
@@ -248,51 +236,6 @@ scenes.forEach(s=>{
 /* dots */
 scenes.forEach(()=>{ const d=document.createElement('span'); d.className='dot'; dotsEl.appendChild(d); });
 
-/* ====== VOCES ====== */
-// Voces elegidas una sola vez: la mejor femenina (Daniela/narradora) y la
-// mejor masculina (Cosmo, con tono de niño). Se prioriza calidad por nombre.
-let vFemale=null, vMale=null, vNarr=null;
-function byPref(pool, names){
-  for(const n of names){
-    const m = pool.find(v=>v.name.toLowerCase().includes(n));
-    if(m) return m;
-  }
-  return null;
-}
-function loadVoices(){
-  voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
-  esVoices = voices.filter(v=>/^es(-|_|$)/i.test(v.lang));
-  const pool = esVoices.length?esVoices:voices;
-  if(!pool.length) return;
-  // Femenina/niña: voces claras y de buena calidad primero (Paulina es-MX es premium)
-  vFemale = byPref(pool, ['paulina','mónica','monica','marisol','angelica','angélica',
-                          'esperanza','helena','laura','sandy','sabina','google español','female','mujer'])
-            || pool[0];
-  // Masculina/niño: Rocko (es-MX, voz de chico joven) es la mejor para un niño;
-  // luego otras masculinas y, si no hay, cualquier voz distinta a la de Daniela.
-  vMale = byPref(pool, ['rocko','reed','juan','jorge','diego','carlos','enrique','pablo',
-                        'andrés','andres','eddy','grandpa','male','hombre'])
-          || pool.find(v=>v!==vFemale) || vFemale;
-  // Narrador/a: distinta a Daniela y de buena calidad
-  vNarr = byPref(pool, ['mónica','monica','shelley','marisol','sandy','google español'])
-          || (pool.find(v=>v!==vFemale)) || vFemale;
-}
-if('speechSynthesis' in window){
-  loadVoices();
-  speechSynthesis.onvoiceschanged=loadVoices;
-}
-function pickVoice(who){
-  if(who===D) return vFemale;
-  if(who===C) return vMale;
-  return vNarr || vFemale;
-}
-function voiceParams(who){
-  // Tonos moderados = menos "robot". Cosmo = niño: voz masculina joven + tono algo alto.
-  if(who===D) return {pitch:1.12, rate:1.0};   // Daniela: niña, suave y natural
-  if(who===C) return {pitch:1.22, rate:1.06};  // Cosmo: niño, brillante y animado (sin distorsionar)
-  return {pitch:1.0, rate:0.94};               // narrador: cálido y pausado
-}
-
 /* ====== RENDER ESCENA ====== */
 function render(){
   // imagen
@@ -304,53 +247,14 @@ function render(){
   document.querySelector('.nav.prev').classList.toggle('hidden', i===0);
   // texto
   textbox.innerHTML='';
-  if(mode==='read'){
-    textbox.classList.remove('hide');
-    scenes[i].lines.forEach((ln,k)=>{
-      const el=document.createElement('div');
-      el.className='line '+ln.w;
-      el.style.animationDelay=(k*0.25)+'s';
-      el.innerHTML=`<span class="who">${ln.w==='daniela'?'Daniela':ln.w==='cosmo'?'Cosmo':''}</span>${ln.t}`;
-      textbox.appendChild(el);
-    });
-  } else {
-    textbox.classList.add('hide'); // en modo voz, oculto el texto
-  }
-  // voz
-  cancelSpeech();
-  if(mode==='voice' && !muted) speakScene();
-}
-
-/* ====== VOZ ====== */
-let speaking=false;
-function cancelSpeech(){
-  if('speechSynthesis' in window){ speechSynthesis.cancel(); }
-  speaking=false;
-}
-function speakScene(){
-  if(!('speechSynthesis' in window)) return;
-  const queue=scenes[i].lines.filter(l=>!/^\(/.test(l.t)); // omite acotaciones tipo (ladra)
-  let k=0;
-  speaking=true;
-  (function nextLine(){
-    if(k>=queue.length || !speaking) return;
-    const ln=queue[k++];
-    const u=new SpeechSynthesisUtterance(ln.t);
-    const v=pickVoice(ln.w); if(v) u.voice=v;
-    u.lang='es-MX';
-    const p=voiceParams(ln.w); u.pitch=p.pitch; u.rate=p.rate;
-    u.onend=()=>{ setTimeout(nextLine, 280); };
-    u.onerror=()=>{ setTimeout(nextLine, 100); };
-    speechSynthesis.speak(u);
-  })();
-}
-function speak(text, who){
-  if(!('speechSynthesis' in window)||muted) return;
-  cancelSpeech();
-  const u=new SpeechSynthesisUtterance(text);
-  const v=pickVoice(who||N); if(v) u.voice=v;
-  u.lang='es-MX'; const p=voiceParams(who||N); u.pitch=p.pitch; u.rate=p.rate;
-  speechSynthesis.speak(u);
+  textbox.classList.remove('hide');
+  scenes[i].lines.forEach((ln,k)=>{
+    const el=document.createElement('div');
+    el.className='line '+ln.w;
+    el.style.animationDelay=(k*0.25)+'s';
+    el.innerHTML=`<span class="who">${ln.w==='daniela'?'Daniela':ln.w==='cosmo'?'Cosmo':''}</span>${ln.t}`;
+    textbox.appendChild(el);
+  });
 }
 
 /* ====== NAV ====== */
@@ -361,45 +265,19 @@ function next(){
 function prev(){ if(i>0){ i--; document.getElementById('endcard').classList.remove('on'); render(); } }
 
 function showEnd(){
-  cancelSpeech();
   textbox.classList.add('hide');
   document.getElementById('endtext').textContent=FINAL;
   document.getElementById('endcard').classList.add('on');
-  if(mode==='voice' && !muted) speak(FINAL, N);
 }
 
-/* ====== MODOS / CONTROLES ====== */
-function iniciar(m){
-  mode=m;
+/* ====== CONTROLES ====== */
+function iniciar(){
   document.getElementById('start').style.display='none';
   document.getElementById('book').classList.add('on');
   i=0;
-  syncControls();
-  // gesto del usuario: desbloquea audio
-  if(m==='voice' && 'speechSynthesis' in window){
-    const warm=new SpeechSynthesisUtterance(' '); speechSynthesis.speak(warm);
-  }
   render();
 }
-function syncControls(){
-  document.getElementById('btnMode').textContent = mode==='voice'?'🔊':'📖';
-  document.getElementById('btnRepeat').style.display = mode==='voice'?'flex':'none';
-  document.getElementById('btnMute').style.display = mode==='voice'?'flex':'none';
-}
-function toggleMode(){
-  mode = mode==='voice'?'read':'voice';
-  syncControls(); render();
-}
-function toggleMute(){
-  muted=!muted;
-  document.getElementById('btnMute').textContent=muted?'🔇':'🔊';
-  document.getElementById('btnMute').classList.toggle('active',muted);
-  if(muted) cancelSpeech();
-  else if(mode==='voice') speakScene();
-}
-function repetir(){ if(mode==='voice'){ cancelSpeech(); speakScene(); } }
 function volverInicio(){
-  cancelSpeech();
   document.getElementById('endcard').classList.remove('on');
   document.getElementById('book').classList.remove('on');
   document.getElementById('start').style.display='flex';
